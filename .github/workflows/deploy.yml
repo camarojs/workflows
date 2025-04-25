@@ -1,0 +1,61 @@
+name: Deploy
+
+on:
+  workflow_call:
+    secrets:
+      SSH_HOST:
+        required: true
+      SSH_PRIVATE_KEY:
+        required: true
+      SSH_USER:
+        required: true
+      VAULT_ADDR:
+        required: true
+      VAULT_ROLE_ID:
+        required: true
+      VAULT_SECRET_ID:
+        required: true
+
+jobs:
+  deploy-via-ssh:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: ${{ github.event.repository.name }}-${{ github.ref_name }}
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Get secrets from Vault
+        id: vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets: kv/data/${{ env.APP_ENV }} *
+
+      - name: Deploy to server
+        run: |
+          SECRETS='${{ toJSON(steps.vault.outputs) }}'
+          rsync -avzre ssh ./artifact/* "$SSH_USER@$SSH_HOST:~/$APP_ENV"
+          ssh "$SSH_USER@$SSH_HOST" << EOF
+            set -e
+            cd ~/$APP_ENV
+            npm install --omit=dev
+            APP_ENV=$APP_ENV SECRETS='$SECRETS' pm2 startOrReload eng/ecosystem.config.js --update-env
+            pm2 save
+          EOF
+
+          
