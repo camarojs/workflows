@@ -20,23 +20,26 @@ jobs:
   deploy-via-ssh:
     runs-on: ubuntu-latest
     env:
-      APP_ENV: ${{ github.event.repository.name }}-${{ github.ref_name }}
+      APP_ENV: ${{ github.event.repository.name }}-${{ github.ref_name == 'main' && 'production' || github.ref_name }}
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-
       - name: Set up SSH
         run: |
+          eval "$(ssh-agent -s)"
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+          echo "$SSH_PRIVATE_KEY" | ssh-add -
+          
           mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
-      - name: Get secrets from Vault
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+
+      - name: Get Secrets from Vault
         id: vault
         uses: hashicorp/vault-action@v3
         with:
@@ -46,10 +49,10 @@ jobs:
           secretId: ${{ secrets.VAULT_SECRET_ID }}
           secrets: kv/data/${{ env.APP_ENV }} *
 
-      - name: Deploy to server
+      - name: Deploy to Server
         run: |
           SECRETS='${{ toJSON(steps.vault.outputs) }}'
-          rsync -avzre ssh ./artifact/* "$SSH_USER@$SSH_HOST:~/$APP_ENV"
+          rsync -avzre ssh ./build-artifacts/* "$SSH_USER@$SSH_HOST:~/$APP_ENV"
           ssh "$SSH_USER@$SSH_HOST" << EOF
             set -e
             cd ~/$APP_ENV
@@ -57,5 +60,3 @@ jobs:
             APP_ENV=$APP_ENV SECRETS='$SECRETS' pm2 startOrReload eng/ecosystem.config.js --update-env
             pm2 save
           EOF
-
-          
