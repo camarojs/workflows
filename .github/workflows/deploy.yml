@@ -52,11 +52,11 @@ jobs:
       - name: Deploy to Server
         run: |
           SECRETS='${{ toJSON(steps.vault.outputs) }}'
-          rsync -avzre ssh ./build-artifacts/* "$SSH_USER@$SSH_HOST:~/$APP_ENV"
-          ssh "$SSH_USER@$SSH_HOST" << EOF
+          rsync -avzre ssh --delete ./build-artifacts/* "$SSH_USER@$SSH_HOST:~/$APP_ENV"
+          ssh "$SSH_USER@$SSH_HOST" bash -s << EOF
             set -e
             cd ~/$APP_ENV
             npm install --omit=dev
-            APP_ENV=$APP_ENV SECRETS='$SECRETS' pm2 startOrReload eng/ecosystem.config.js --update-env
+            APP_ENV=$APP_ENV SECRETS='$SECRETS' pm2 startOrReload eng/ecosystem.config.js --update-env > /dev/null
             pm2 save
           EOF
