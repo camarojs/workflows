@@ -45,6 +45,7 @@ jobs:
         with:
           url: ${{ secrets.VAULT_ADDR }}
           method: approle
+          exportEnv: false
           roleId: ${{ secrets.VAULT_ROLE_ID }}
           secretId: ${{ secrets.VAULT_SECRET_ID }}
           secrets: kv/data/${{ env.APP_ENV }} *
@@ -56,6 +57,8 @@ jobs:
             set -e
             cd ~/$APP_ENV
             npm install --omit=dev
-            ENV_VARS='${{ toJSON(steps.vault.outputs) }}' pm2 startOrReload eng/ecosystem.config.js --update-env > /dev/null
+            env APP_ENV=$APP_ENV \
+                SECRETS='${{ toJSON(steps.vault.outputs) }}' \
+                pm2 startOrReload eng/ecosystem.config.js --update-env > /dev/null
             pm2 save
           EOF
