@@ -2,6 +2,11 @@ name: Deploy
 
 on:
   workflow_call:
+    inputs:
+      pre-deploy-commands:
+        description: "Commands to run before deployment"
+        required: false
+        type: string
     secrets:
       SSH_HOST:
         required: true
@@ -61,7 +66,7 @@ jobs:
           ssh $SSH_DESTINATION bash -s << EOF
             set -e
             cd ~/$APP_ENV
-            npm install --omit=dev
+            ${{ inputs.pre-deploy-commands || '' }}
             env APP_ENV=$APP_ENV \
                 SECRETS='${{ toJSON(steps.vault.outputs) }}' \
                 pm2 startOrReload eng/ecosystem.config.js --update-env > /dev/null
