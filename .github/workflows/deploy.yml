@@ -62,7 +62,7 @@ jobs:
 
       - name: Deploy to Server
         run: |
-          rsync -avzre ssh --delete ./build-artifacts/* $SSH_DESTINATION:~/$APP_ENV
+          rsync -avzrc -e ssh --delete ./build-artifacts/* $SSH_DESTINATION:~/$APP_ENV
           ssh $SSH_DESTINATION bash -s << EOF
             set -e
             cd ~/$APP_ENV
