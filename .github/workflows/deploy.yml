@@ -19,7 +19,7 @@ jobs:
   deploy-via-ssh:
     runs-on: ubuntu-latest
     env:
-      APP_ENV: ${{ github.event.repository.name }}-${{ github.ref_name == 'main' && 'production' || github.ref_name }}
+      APP_ENV: ${{ github.ref_name == 'main' && 'production' || github.ref_name }}
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       SSH_DESTINATION: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
