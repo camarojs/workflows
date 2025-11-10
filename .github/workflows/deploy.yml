@@ -19,6 +19,7 @@ jobs:
   deploy-via-ssh:
     runs-on: ubuntu-latest
     env:
+      APP_NAME: ${{ github.event.repository.name }}
       APP_ENV: ${{ github.ref_name == 'main' && 'production' || github.ref_name }}
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -40,12 +41,12 @@ jobs:
 
       - name: Deploy to Server
         run: |
-          rsync -avzrc -e ssh --delete ./build-artifacts/* $SSH_DESTINATION:~/$APP_ENV
+          rsync -avzrc -e ssh --delete ./build-artifacts/* $SSH_DESTINATION:~/$APP_NAME-$APP_ENV
           ssh $SSH_DESTINATION "bash -s" << EOF
             set -e
-            cd ~/${APP_ENV}
+            cd ~/${APP_NAME}-${APP_ENV}
             ${{ inputs.pre-deploy-script || '' }}
-            env APP_ENV=${APP_ENV} VAULT_ADDR=http://localhost:9202 \
+            env APP_NAME=${APP_NAME} APP_ENV=${APP_ENV} VAULT_ADDR=http://localhost:9202 \
                 pm2 startOrReload eng/ecosystem.config.js --update-env > /dev/null
             pm2 save
           EOF
