@@ -14,12 +14,6 @@ on:
         required: true
       SSH_USER:
         required: true
-      VAULT_ADDR:
-        required: true
-      VAULT_ROLE_ID:
-        required: true
-      VAULT_SECRET_ID:
-        required: true
 
 jobs:
   deploy-via-ssh:
@@ -34,7 +28,7 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v4
 
-      - name: Set up SSH
+      - name: Setup SSH
         run: |
           eval "$(ssh-agent -s)"
           echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
@@ -44,31 +38,14 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
-      - name: Set up SSH tunnel to Vault
-        run: |
-          sudo iptables -t nat -A OUTPUT -d 10.8.0.1 -p tcp --dport 443 -j DNAT --to-destination 127.0.0.1:8443
-          ssh -fN -L 127.0.0.1:8443:10.8.0.1:443 $SSH_DESTINATION
-
-      - name: Get Secrets from Vault
-        id: vault
-        uses: hashicorp/vault-action@v3
-        with:
-          url: ${{ secrets.VAULT_ADDR }}
-          method: approle
-          exportEnv: false
-          roleId: ${{ secrets.VAULT_ROLE_ID }}
-          secretId: ${{ secrets.VAULT_SECRET_ID }}
-          secrets: kv/data/${{ env.APP_ENV }} *
-
       - name: Deploy to Server
         run: |
           rsync -avzrc -e ssh --delete ./build-artifacts/* $SSH_DESTINATION:~/$APP_ENV
-          ssh $SSH_DESTINATION bash -s << EOF
+          ssh $SSH_DESTINATION "bash -s" << EOF
             set -e
-            cd ~/$APP_ENV
+            cd ~/${APP_ENV}
             ${{ inputs.pre-deploy-script || '' }}
-            env APP_ENV=$APP_ENV \
-                SECRETS='${{ toJSON(steps.vault.outputs) }}' \
+            env APP_ENV=${APP_ENV} VAULT_ADDR=http://localhost:9202 \
                 pm2 startOrReload eng/ecosystem.config.js --update-env > /dev/null
             pm2 save
           EOF
