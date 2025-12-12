@@ -1,0 +1,30 @@
+name: Update major tag alias
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  update-major-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version info
+        id: version
+        run: |
+          TAG="${GITHUB_REF##*/}"
+          MAJOR=$(echo "$TAG" | sed -E 's/^(v[0-9]+).*/\1/')
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "major=$MAJOR" >> $GITHUB_OUTPUT
+
+      - name: Update major tag
+        run: |
+          git tag -f "${{ steps.version.outputs.major }}" "${{ steps.version.outputs.tag }}"
+          git push -f origin "${{ steps.version.outputs.major }}"
