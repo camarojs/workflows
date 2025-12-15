@@ -2,9 +2,10 @@ name: Publish Node.js Package
 
 on:
   workflow_call:
-    secrets:
-      NPM_TOKEN:
+    inputs:
+      package-path:
         required: true
+        type: string
 
 jobs:
   publish-to-npm:
@@ -18,15 +19,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
-          cache-dependency-path: "./build-artifact/package-lock.json"
+          cache-dependency-path: "./build-artifact/${{ inputs.package-path }}/package-lock.json"
           cache: "npm"
           registry-url: "https://registry.npmjs.org"
 
       - name: Publish to NPM
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          cd ./build-artifact
+          cd ./build-artifact/${{ inputs.package-path }}
           VERSION=$(node -p "require('./package.json').version")
           if [[ "$VERSION" == *"-beta"* ]]; then
             npm publish --tag beta --provenance --access public
