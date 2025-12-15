@@ -18,7 +18,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
-          cache-dependency-path: "./build-artifacts/package-lock.json"
+          cache-dependency-path: "./build-artifact/package-lock.json"
           cache: "npm"
           registry-url: "https://registry.npmjs.org"
 
@@ -26,7 +26,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          cd ./build-artifacts
+          cd ./build-artifact
           VERSION=$(node -p "require('./package.json').version")
           if [[ "$VERSION" == *"-beta"* ]]; then
             npm publish --tag beta --provenance --access public

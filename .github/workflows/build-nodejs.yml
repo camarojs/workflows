@@ -3,11 +3,11 @@ name: Build Node.js Project
 on:
   workflow_call:
     inputs:
-      upload-artifacts:
+      upload-artifact:
         required: false
         type: boolean
         default: false
-      path-to-artifacts:
+      path-to-artifact:
         required: false
         type: string
 
@@ -37,9 +37,9 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Upload Artifacts
-        if: ${{ inputs.upload-artifacts == true }}
+      - name: Upload Artifact
+        if: ${{ inputs.upload-artifact == true }}
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts
-          path: ${{ inputs.path-to-artifacts }}
+          name: build-artifact
+          path: ${{ inputs.path-to-artifact }}
