@@ -13,8 +13,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-tags: true
+
+      - name: Fetch tags
+        run: |
+          git fetch --tags --force
 
       - name: Extract version info
         id: version
