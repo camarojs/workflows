@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
-          cache-dependency-path: "./build-artifact/${{ inputs.package-path }}/package-lock.json"
+          cache-dependency-path: "./build-artifact/package-lock.json"
           cache: "npm"
           registry-url: "https://registry.npmjs.org"
 
